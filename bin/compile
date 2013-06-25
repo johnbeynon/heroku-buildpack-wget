@@ -1,0 +1,38 @@
+mktmpdir() {
+  dir=$(mktemp -t fakesu-$1-XXXX)
+  rm -rf $dir
+  mkdir -p $dir
+  echo $dir
+}
+
+function indent() {
+  c='s/^/       /'
+  case $(uname) in
+    Darwin) sed -l "$c";;
+    *)      sed -u "$c";;
+  esac
+}
+
+BUILDPACK_DIR=`cd $(dirname $0); cd ..; pwd`
+BUILD_DIR=$1
+CACHE_DIR=$2
+
+WGET_BUILD="$(mktmpdir wget)"
+
+mkdir -p $CACHE_DIR/.tools/wget
+
+export PATH=/sbin:/usr/sbin:$PATH:$CACHE_DIR/.tools/wget/bin
+
+echo "-----> Fetching and installing wget"
+cd $WGET_BUILD
+curl -O http://ftp.gnu.org/gnu/wget/wget-1.13.4.tar.bz2
+tar jxvf wget-1.13.4.tar.bz2
+cd wget-1.13.4
+./configure --prefix=$CACHE_DIR/.tools/wget --without-ssl
+make
+make install
+echo "wget installed" | indent
+
+cd $BUILD_DIR
+mkdir -p $BUILD_DIR/bin
+cp $CACHE_DIR/.tools/wget/bin/wget $BUILD_DIR/bin
